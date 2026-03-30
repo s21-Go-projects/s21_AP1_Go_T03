@@ -1,9 +1,0 @@
-go 1.25.5
-
-use (
-	./cmd/app
-	./internal/domain
-    ./internal/datasource
-    ./internal/web
-    ./internal/di
-)
