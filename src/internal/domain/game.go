@@ -11,6 +11,7 @@ const (
 )
 
 type Game struct {
-	ID    uuid.UUID
-	Board Board
+	ID     uuid.UUID
+	Board  Board
+	Winner int
 }

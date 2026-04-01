@@ -12,7 +12,7 @@ import (
 
 func Run(handler *web.Handler) {
 	mux := http.NewServeMux()
-	mux.HandleFunc("/game/", handler.Move)
+	mux.HandleFunc("/game/", handler.Handle)
 	http.ListenAndServe(":8080", mux)
 }
 
@@ -20,8 +20,9 @@ var Module = fx.Options(
 	fx.Provide(
 		datasource.NewStorage,
 		datasource.NewRepository,
-		func(r datasource.Repository) domain.Repository { return r },
+		//func(r domain.Repository) domain.Service { return r },
 		domain.NewService,
+		domain.NewProcessor,
 		web.NewHandler,
 	),
 	fx.Invoke(func(lc fx.Lifecycle, handler *web.Handler) {

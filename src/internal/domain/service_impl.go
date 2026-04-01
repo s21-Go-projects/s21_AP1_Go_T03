@@ -1,13 +1,6 @@
 package domain
 
-import (
-	"github.com/google/uuid"
-)
-
-type Repository interface {
-	Save(Game) error
-	Get(uuid.UUID) (Game, error)
-}
+import "fmt"
 
 type service struct {
 	repo Repository
@@ -17,33 +10,30 @@ func NewService(r Repository) Service {
 	return &service{repo: r}
 }
 
-func (s *service) Get(id uuid.UUID) (Game, error) {
-	return s.repo.Get(id)
-}
-
-func (s *service) Save(g Game) error {
-	return s.repo.Save(g)
-}
-
-func (s *service) Validate(prev Game, next Game) bool {
+func (s *service) Validate(game Game) bool {
+	prev, err := s.repo.Get(game.ID)
+	if err != nil {
+		s.repo.Save(game)
+		return true
+	}
 	changes := 0
 	for i := 0; i < 3; i++ {
 		for j := 0; j < 3; j++ {
 			// нельзя менять уже занятые клетки
-			if prev.Board[i][j] != next.Board[i][j] {
+			if prev.Board[i][j] != game.Board[i][j] {
 				// новая клетка должна быть X (игрок)
-				if prev.Board[i][j] != Empty || next.Board[i][j] != X {
+				if prev.Board[i][j] != Empty || game.Board[i][j] != X {
 					return false
 				}
 				changes++
 			}
 		}
 	}
-	// игрок может сделать ровно один ход
+
 	return changes == 1
 }
 
-func (s *service) CheckWinner(b Board) int {
+func (s *service) CheckWinner(game Game) int {
 	lines := [][][2]int{
 		{{0, 0}, {0, 1}, {0, 2}},
 		{{1, 0}, {1, 1}, {1, 2}},
@@ -56,18 +46,28 @@ func (s *service) CheckWinner(b Board) int {
 	}
 
 	for _, line := range lines {
-		a := b[line[0][0]][line[0][1]]
-		if a != Empty && a == b[line[1][0]][line[1][1]] && a == b[line[2][0]][line[2][1]] {
+		a := game.Board[line[0][0]][line[0][1]]
+		if a != Empty && a == game.Board[line[1][0]][line[1][1]] && a == game.Board[line[2][0]][line[2][1]] {
+			game.Winner = a
+			s.repo.Save(game)
+
+			// tec, _ := s.repo.Get(game.ID)
+			// fmt.Println("-------", tec.Winner)
+			// fmt.Println(a)
+
 			return a
 		}
 	}
 	return Empty
 }
 
-// simple minimax omitted depth optimization
-func (s *service) NextMove(g Game) (Game, error) {
-	if s.CheckWinner(g.Board) != Empty {
-		return g, nil
+func (s *service) NextMove(game Game) Game {
+	s.repo.Save(game)
+
+	if s.CheckWinner(game) != Empty {
+		fmt.Println("win1")
+
+		return game
 	}
 
 	bestScore := -1000
@@ -75,10 +75,10 @@ func (s *service) NextMove(g Game) (Game, error) {
 
 	for i := 0; i < 3; i++ {
 		for j := 0; j < 3; j++ {
-			if g.Board[i][j] == Empty {
-				g.Board[i][j] = O
-				score := minimax(g.Board, false)
-				g.Board[i][j] = Empty
+			if game.Board[i][j] == Empty {
+				game.Board[i][j] = O
+				score := minimax(game.Board, false)
+				game.Board[i][j] = Empty
 				if score > bestScore {
 					bestScore = score
 					move = [2]int{i, j}
@@ -87,8 +87,16 @@ func (s *service) NextMove(g Game) (Game, error) {
 		}
 	}
 
-	g.Board[move[0]][move[1]] = O
-	return g, nil
+	game.Board[move[0]][move[1]] = O
+
+	s.repo.Save(game)
+
+	if s.CheckWinner(game) != Empty {
+		tec, _ := s.repo.Get(game.ID)
+		return tec
+	}
+
+	return game
 }
 
 func minimax(board Board, isMax bool) int {
