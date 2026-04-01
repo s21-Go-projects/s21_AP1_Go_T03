@@ -2,7 +2,6 @@ package web
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"tictac/internal/domain"
 )
@@ -19,7 +18,6 @@ func (h *Handler) Handle(w http.ResponseWriter, r *http.Request) {
 
 	var dto GameDTO
 	json.NewDecoder(r.Body).Decode(&dto)
-	fmt.Println(dto)
 	updated, err := h.processor.Process(ToDomain(dto))
 	if err != nil {
 		json.NewEncoder(w).Encode(ToDTO(updated))

@@ -1,7 +1,5 @@
 package domain
 
-import "fmt"
-
 type service struct {
 	repo Repository
 }
@@ -10,11 +8,11 @@ func NewService(r Repository) Service {
 	return &service{repo: r}
 }
 
-func (s *service) Validate(game Game) bool {
+func (s *service) Validate(game Game) (Game, bool) {
 	prev, err := s.repo.Get(game.ID)
 	if err != nil {
 		s.repo.Save(game)
-		return true
+		return game, true
 	}
 	changes := 0
 	for i := 0; i < 3; i++ {
@@ -23,14 +21,16 @@ func (s *service) Validate(game Game) bool {
 			if prev.Board[i][j] != game.Board[i][j] {
 				// новая клетка должна быть X (игрок)
 				if prev.Board[i][j] != Empty || game.Board[i][j] != X {
-					return false
+					return prev, false
 				}
 				changes++
 			}
 		}
 	}
-
-	return changes == 1
+	if changes != 1 {
+		return prev, false
+	}
+	return game, true
 }
 
 func (s *service) CheckWinner(game Game) int {
@@ -50,11 +50,6 @@ func (s *service) CheckWinner(game Game) int {
 		if a != Empty && a == game.Board[line[1][0]][line[1][1]] && a == game.Board[line[2][0]][line[2][1]] {
 			game.Winner = a
 			s.repo.Save(game)
-
-			// tec, _ := s.repo.Get(game.ID)
-			// fmt.Println("-------", tec.Winner)
-			// fmt.Println(a)
-
 			return a
 		}
 	}
@@ -63,16 +58,8 @@ func (s *service) CheckWinner(game Game) int {
 
 func (s *service) NextMove(game Game) Game {
 	s.repo.Save(game)
-
-	if s.CheckWinner(game) != Empty {
-		fmt.Println("win1")
-
-		return game
-	}
-
 	bestScore := -1000
 	var move [2]int
-
 	for i := 0; i < 3; i++ {
 		for j := 0; j < 3; j++ {
 			if game.Board[i][j] == Empty {
@@ -86,14 +73,12 @@ func (s *service) NextMove(game Game) Game {
 			}
 		}
 	}
-
 	game.Board[move[0]][move[1]] = O
-
 	s.repo.Save(game)
-
-	if s.CheckWinner(game) != Empty {
-		tec, _ := s.repo.Get(game.ID)
-		return tec
+	a := s.CheckWinner(game)
+	if a != Empty {
+		game.Winner = a
+		return game
 	}
 
 	return game

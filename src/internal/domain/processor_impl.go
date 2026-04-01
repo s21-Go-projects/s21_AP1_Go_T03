@@ -14,14 +14,15 @@ func NewProcessor(s Service) Processor {
 
 func (p *processor) Process(g Game) (Game, error) {
 
-	if !p.service.Validate(g) {
+	if g, ok := p.service.Validate(g); !ok {
 		return g, errors.New("invalid move")
 	}
 
 	if p.service.CheckWinner(g) != Empty {
+		g.Winner = p.service.CheckWinner(g)
 		return g, nil
 	}
-
+	
 	return p.service.NextMove(g), nil
 
 }
