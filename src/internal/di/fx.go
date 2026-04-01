@@ -20,7 +20,6 @@ var Module = fx.Options(
 	fx.Provide(
 		datasource.NewStorage,
 		datasource.NewRepository,
-		//func(r domain.Repository) domain.Service { return r },
 		domain.NewService,
 		domain.NewProcessor,
 		web.NewHandler,
